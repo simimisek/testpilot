@@ -171,9 +171,12 @@ export default function ProjectDetail({ project, tests: initialTests }: Props) {
     reader.onload = async (ev) => {
       const text = ev.target?.result as string
       const result = Papa.parse(text, { header: true, skipEmptyLines: true, transformHeader: (h: string) => h.trim().replace(/﻿/g, '') })
-      await importCsv(result.data as Record<string, string>[])
-      setImporting(false)
-      if (csvRef.current) csvRef.current.value = ''
+      try {
+        await importCsv(result.data as Record<string, string>[])
+      } finally {
+        setImporting(false)
+        if (csvRef.current) csvRef.current.value = ''
+      }
     }
     reader.readAsText(file, 'UTF-8')
   }
@@ -205,7 +208,10 @@ export default function ProjectDetail({ project, tests: initialTests }: Props) {
       }
       existingMap.has(testId) ? toUpdate.push({ id: existingMap.get(testId)!.id, data }) : toAdd.push(data)
     }
-    if (toAdd.length > 0) await supabase.from('tests').insert(toAdd)
+    if (toAdd.length > 0) {
+      const { error } = await supabase.from('tests').insert(toAdd)
+      if (error) { showToast(`Chyba importu: ${error.message}`); return }
+    }
     for (const u of toUpdate) await supabase.from('tests').update(u.data).eq('id', u.id)
     const now = new Date().toISOString()
     await supabase.from('projects').update({ last_import_at: now, updated_at: now }).eq('id', project.id)
