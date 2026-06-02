@@ -91,7 +91,8 @@ export default function ProjectDetail({ project, tests: initialTests }: Props) {
 
   async function refreshTests() {
     const supabase = createClient()
-    const { data } = await supabase.from('tests').select('*').eq('project_id', project.id).eq('archived', false).order('position').order('id')
+    const { data, error } = await supabase.from('tests').select('*').eq('project_id', project.id).eq('archived', false).order('position').order('id').limit(10000)
+    if (error) { showToast(`Chyba načítání: ${error.message}`); return }
     if (data) setTests(data as TestCase[])
   }
 
