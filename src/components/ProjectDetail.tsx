@@ -328,6 +328,22 @@ export default function ProjectDetail({ project, tests: initialTests }: Props) {
         </select>
       </div>
 
+      {/* Test list header */}
+      {filtered.length > 0 && (
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-xs text-slate-400">{filtered.length} {filtered.length === 1 ? 'test' : 'testů'}</span>
+          <button
+            onClick={() => {
+              const allExpanded = filtered.every(t => expanded.has(t.id))
+              setExpanded(allExpanded ? new Set() : new Set(filtered.map(t => t.id)))
+            }}
+            className="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
+          >
+            {filtered.every(t => expanded.has(t.id)) ? 'Sbalit vše' : 'Rozbalit vše'}
+          </button>
+        </div>
+      )}
+
       {/* Test list */}
       {filtered.length === 0 ? (
         <div className="text-center py-16 text-slate-400">
