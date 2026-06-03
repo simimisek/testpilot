@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import Papa from 'papaparse'
 import { createClient } from '@/lib/supabase/client'
@@ -53,7 +53,17 @@ export default function ProjectDetail({ project, tests: initialTests }: Props) {
   const [form, setForm]           = useState({ ...EMPTY_FORM })
   const [formError, setFormError] = useState('')
   const [saving, setSaving]       = useState(false)
+  const [newlyAddedId, setNewlyAddedId] = useState<number | null>(null)
   const csvRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!newlyAddedId) return
+    const el = document.getElementById(`tc-${newlyAddedId}`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setNewlyAddedId(null)
+    }
+  }, [tests, newlyAddedId])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -140,8 +150,18 @@ export default function ProjectDetail({ project, tests: initialTests }: Props) {
       const dup = tests.find(t => t.test_id === form.test_id.trim())
       if (dup) { setFormError(`ID ${form.test_id} již existuje.`); setSaving(false); return }
       const position = tests.length
-      const { error } = await supabase.from('tests').insert({ ...form, test_id: form.test_id.trim(), name: form.name.trim(), project_id: project.id, archived: false, position })
+      const { data: inserted, error } = await supabase.from('tests').insert({ ...form, test_id: form.test_id.trim(), name: form.name.trim(), project_id: project.id, archived: false, position }).select().single()
       if (error) { setFormError(error.message); setSaving(false); return }
+      await refreshTests(); setSaving(false); setModal(null)
+      if (inserted) {
+        setExpanded(prev => new Set([...prev, inserted.id]))
+        setNewlyAddedId(inserted.id)
+      }
+      const now = new Date().toISOString()
+      await supabase.from('projects').update({ updated_at: now }).eq('id', project.id)
+      setUpdatedAt(now)
+      showToast('Test case přidán')
+      return
     } else {
       const { error } = await supabase.from('tests').update({ ...form, test_id: form.test_id.trim(), name: form.name.trim() }).eq('id', editingId!)
       if (error) { setFormError(error.message); setSaving(false); return }
@@ -360,15 +380,16 @@ export default function ProjectDetail({ project, tests: initialTests }: Props) {
             <SortableContext items={filtered.map(t => t.id)} strategy={verticalListSortingStrategy}>
               <div className="grid gap-2">
                 {filtered.map(t => (
-                  <SortableTestCard
-                    key={t.id}
-                    t={t}
-                    isOpen={expanded.has(t.id)}
-                    onToggle={() => setExpanded(prev => { const s = new Set(prev); s.has(t.id) ? s.delete(t.id) : s.add(t.id); return s })}
-                    onStatusChange={changeStatus}
-                    onEdit={openEdit}
-                    onDelete={deleteTest}
-                  />
+                  <div key={t.id} id={`tc-${t.id}`}>
+                    <SortableTestCard
+                      t={t}
+                      isOpen={expanded.has(t.id)}
+                      onToggle={() => setExpanded(prev => { const s = new Set(prev); s.has(t.id) ? s.delete(t.id) : s.add(t.id); return s })}
+                      onStatusChange={changeStatus}
+                      onEdit={openEdit}
+                      onDelete={deleteTest}
+                    />
+                  </div>
                 ))}
               </div>
             </SortableContext>
