@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -88,6 +89,10 @@ export default function OrganizationsAdmin({ organizations }: { organizations: O
                 Vytvořeno: {new Date(org.created_at).toLocaleDateString('cs-CZ')}
               </p>
             </div>
+            <Link href={`/dashboard?org=${org.id}`}
+              className="text-sm text-indigo-600 hover:text-indigo-800 px-3 py-1.5 rounded-lg hover:bg-indigo-50 border border-indigo-200">
+              Projekty
+            </Link>
             <button onClick={() => openEditModal(org.id, org.name)}
               className="text-sm text-slate-600 hover:text-slate-800 px-3 py-1.5 rounded-lg hover:bg-slate-50 border border-slate-200">
               Přejmenovat

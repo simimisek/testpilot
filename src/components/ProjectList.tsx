@@ -13,9 +13,10 @@ interface ProjectWithOrg extends Project {
 interface Props {
   projects: ProjectWithOrg[]
   isAdmin: boolean
+  initialOrgFilter?: string
 }
 
-export default function ProjectList({ projects, isAdmin }: Props) {
+export default function ProjectList({ projects, isAdmin, initialOrgFilter = '' }: Props) {
   const [showNew, setShowNew]           = useState(false)
   const [name, setName]                 = useState('')
   const [orgId, setOrgId]               = useState('')
@@ -24,7 +25,7 @@ export default function ProjectList({ projects, isAdmin }: Props) {
   const [error, setError]               = useState('')
 
   // Filter by org (admin only)
-  const [filterOrgId, setFilterOrgId]   = useState('')
+  const [filterOrgId, setFilterOrgId]   = useState(initialOrgFilter)
 
   // Edit project name
   const [showEdit, setShowEdit]         = useState(false)

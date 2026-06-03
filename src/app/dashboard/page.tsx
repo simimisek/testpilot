@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ProjectList from '@/components/ProjectList'
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ org?: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -21,6 +21,7 @@ export default async function DashboardPage() {
   }
 
   const { data: projects } = await query
+  const { org: initialOrgFilter } = await searchParams
 
-  return <ProjectList projects={projects || []} isAdmin={isAdmin} />
+  return <ProjectList projects={projects || []} isAdmin={isAdmin} initialOrgFilter={initialOrgFilter || ''} />
 }
