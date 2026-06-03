@@ -7,10 +7,18 @@ import { useRouter } from 'next/navigation'
 interface Org { id: string; name: string; created_at: string }
 
 export default function OrganizationsAdmin({ organizations }: { organizations: Org[] }) {
-  const [showNew, setShowNew] = useState(false)
-  const [name, setName]       = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
+  const [showNew, setShowNew]         = useState(false)
+  const [name, setName]               = useState('')
+  const [loading, setLoading]         = useState(false)
+  const [error, setError]             = useState('')
+
+  // Edit org name
+  const [showEdit, setShowEdit]       = useState(false)
+  const [editId, setEditId]           = useState('')
+  const [editName, setEditName]       = useState('')
+  const [editLoading, setEditLoading] = useState(false)
+  const [editError, setEditError]     = useState('')
+
   const router = useRouter()
 
   async function create() {
@@ -30,6 +38,28 @@ export default function OrganizationsAdmin({ organizations }: { organizations: O
     if (!confirm('Smazat organizaci? Smažou se i všechny její projekty!')) return
     const supabase = createClient()
     await supabase.from('organizations').delete().eq('id', id)
+    router.refresh()
+  }
+
+  function openEditModal(id: string, currentName: string) {
+    setEditId(id)
+    setEditName(currentName)
+    setEditError('')
+    setShowEdit(true)
+  }
+
+  async function renameOrg() {
+    if (!editName.trim()) return
+    setEditLoading(true)
+    setEditError('')
+    const supabase = createClient()
+    const { error: err } = await supabase
+      .from('organizations')
+      .update({ name: editName.trim() })
+      .eq('id', editId)
+    setEditLoading(false)
+    if (err) { setEditError(err.message); return }
+    setShowEdit(false)
     router.refresh()
   }
 
@@ -58,6 +88,10 @@ export default function OrganizationsAdmin({ organizations }: { organizations: O
                 Vytvořeno: {new Date(org.created_at).toLocaleDateString('cs-CZ')}
               </p>
             </div>
+            <button onClick={() => openEditModal(org.id, org.name)}
+              className="text-sm text-slate-600 hover:text-slate-800 px-3 py-1.5 rounded-lg hover:bg-slate-50 border border-slate-200">
+              Přejmenovat
+            </button>
             <button onClick={() => deleteOrg(org.id)}
               className="text-sm text-red-500 hover:text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-red-200">
               Smazat
@@ -66,6 +100,7 @@ export default function OrganizationsAdmin({ organizations }: { organizations: O
         ))}
       </div>
 
+      {/* New org modal */}
       {showNew && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowNew(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
@@ -83,6 +118,32 @@ export default function OrganizationsAdmin({ organizations }: { organizations: O
                 {loading ? 'Vytváření…' : 'Vytvořit'}
               </button>
               <button onClick={() => setShowNew(false)}
+                className="py-2 px-4 border border-slate-200 text-slate-600 rounded-xl text-sm">
+                Zrušit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit org name modal */}
+      {showEdit && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowEdit(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-slate-900 mb-4">Přejmenovat organizaci</h2>
+            <input
+              type="text" value={editName} onChange={e => setEditName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && renameOrg()}
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 mb-3"
+              autoFocus
+            />
+            {editError && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg mb-3">{editError}</p>}
+            <div className="flex gap-3">
+              <button onClick={renameOrg} disabled={editLoading || !editName.trim()}
+                className="flex-1 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium disabled:opacity-50">
+                {editLoading ? 'Ukládání…' : 'Uložit'}
+              </button>
+              <button onClick={() => setShowEdit(false)}
                 className="py-2 px-4 border border-slate-200 text-slate-600 rounded-xl text-sm">
                 Zrušit
               </button>

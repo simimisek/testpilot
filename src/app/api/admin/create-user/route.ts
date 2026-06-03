@@ -29,12 +29,15 @@ export async function POST(req: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
-  // Update profile with org and role
-  await admin.from('profiles').update({
+  // Upsert profile with org and role (trigger may have already created a base row)
+  const { error: profileError } = await admin.from('profiles').upsert({
+    id: newUser.user.id,
     organization_id: orgId,
     role: role || 'member',
     full_name: fullName || null
-  }).eq('id', newUser.user.id)
+  }, { onConflict: 'id' })
+
+  if (profileError) return NextResponse.json({ error: 'Uživatel vytvořen, ale nepodařilo se nastavit profil: ' + profileError.message }, { status: 500 })
 
   return NextResponse.json({ ok: true })
 }

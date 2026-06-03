@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -16,13 +16,37 @@ interface Props {
 }
 
 export default function ProjectList({ projects, isAdmin }: Props) {
-  const [showNew, setShowNew] = useState(false)
-  const [name, setName]       = useState('')
-  const [orgId, setOrgId]     = useState('')
-  const [orgs, setOrgs]       = useState<{ id: string; name: string }[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
+  const [showNew, setShowNew]           = useState(false)
+  const [name, setName]                 = useState('')
+  const [orgId, setOrgId]               = useState('')
+  const [orgs, setOrgs]                 = useState<{ id: string; name: string }[]>([])
+  const [loading, setLoading]           = useState(false)
+  const [error, setError]               = useState('')
+
+  // Filter by org (admin only)
+  const [filterOrgId, setFilterOrgId]   = useState('')
+
+  // Edit project name
+  const [showEdit, setShowEdit]         = useState(false)
+  const [editId, setEditId]             = useState('')
+  const [editName, setEditName]         = useState('')
+  const [editLoading, setEditLoading]   = useState(false)
+  const [editError, setEditError]       = useState('')
+
   const router = useRouter()
+
+  // Unique orgs from projects list (for filter dropdown)
+  const orgOptions = useMemo(() => {
+    const map = new Map<string, string>()
+    projects.forEach(p => {
+      if (p.organization) map.set(p.organization.id, p.organization.name)
+    })
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
+  }, [projects])
+
+  const filteredProjects = isAdmin && filterOrgId
+    ? projects.filter(p => p.organization?.id === filterOrgId)
+    : projects
 
   async function openNewModal() {
     setName('')
@@ -69,6 +93,28 @@ export default function ProjectList({ projects, isAdmin }: Props) {
     router.refresh()
   }
 
+  function openEditModal(id: string, currentName: string) {
+    setEditId(id)
+    setEditName(currentName)
+    setEditError('')
+    setShowEdit(true)
+  }
+
+  async function renameProject() {
+    if (!editName.trim()) return
+    setEditLoading(true)
+    setEditError('')
+    const supabase = createClient()
+    const { error: err } = await supabase
+      .from('projects')
+      .update({ name: editName.trim(), updated_at: new Date().toISOString() })
+      .eq('id', editId)
+    setEditLoading(false)
+    if (err) { setEditError(err.message); return }
+    setShowEdit(false)
+    router.refresh()
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
       <div className="flex items-center justify-between mb-8">
@@ -82,7 +128,23 @@ export default function ProjectList({ projects, isAdmin }: Props) {
         </button>
       </div>
 
-      {projects.length === 0 ? (
+      {/* Org filter – admin only, shown only when there are multiple orgs */}
+      {isAdmin && orgOptions.length > 1 && (
+        <div className="mb-5">
+          <select
+            value={filterOrgId}
+            onChange={e => setFilterOrgId(e.target.value)}
+            className="px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white text-slate-700 focus:outline-none focus:border-indigo-400"
+          >
+            <option value="">Všechny organizace</option>
+            {orgOptions.map(o => (
+              <option key={o.id} value={o.id}>{o.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {filteredProjects.length === 0 ? (
         <div className="text-center py-20 text-slate-400">
           <div className="text-5xl mb-4">📋</div>
           <p className="text-lg font-medium text-slate-500">Zatím žádné projekty</p>
@@ -90,7 +152,7 @@ export default function ProjectList({ projects, isAdmin }: Props) {
         </div>
       ) : (
         <div className="grid gap-4">
-          {projects.map(p => (
+          {filteredProjects.map(p => (
             <div key={p.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
               <div className="flex items-start gap-4">
                 <div className="flex-1 min-w-0">
@@ -107,6 +169,10 @@ export default function ProjectList({ projects, isAdmin }: Props) {
                     className="px-4 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors">
                     Otevřít
                   </Link>
+                  <button onClick={() => openEditModal(p.id, p.name)}
+                    className="px-3 py-1.5 text-slate-600 text-sm rounded-lg hover:bg-slate-50 border border-slate-200">
+                    Přejmenovat
+                  </button>
                   <button onClick={() => deleteProject(p.id, p.name)}
                     className="px-3 py-1.5 text-red-500 text-sm rounded-lg hover:bg-red-50 border border-red-200">
                     Smazat
@@ -118,6 +184,7 @@ export default function ProjectList({ projects, isAdmin }: Props) {
         </div>
       )}
 
+      {/* New project modal */}
       {showNew && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowNew(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
@@ -150,6 +217,32 @@ export default function ProjectList({ projects, isAdmin }: Props) {
                 {loading ? 'Vytváření…' : 'Vytvořit projekt'}
               </button>
               <button onClick={() => setShowNew(false)}
+                className="py-2 px-4 border border-slate-200 text-slate-600 rounded-xl text-sm">
+                Zrušit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit project name modal */}
+      {showEdit && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowEdit(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-slate-900 mb-4">Přejmenovat projekt</h2>
+            <input
+              type="text" value={editName} onChange={e => setEditName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && renameProject()}
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 mb-3"
+              autoFocus
+            />
+            {editError && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg mb-3">{editError}</p>}
+            <div className="flex gap-3">
+              <button onClick={renameProject} disabled={editLoading || !editName.trim()}
+                className="flex-1 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium disabled:opacity-50">
+                {editLoading ? 'Ukládání…' : 'Uložit'}
+              </button>
+              <button onClick={() => setShowEdit(false)}
                 className="py-2 px-4 border border-slate-200 text-slate-600 rounded-xl text-sm">
                 Zrušit
               </button>
