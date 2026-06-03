@@ -170,7 +170,7 @@ export default function ProjectDetail({ project, tests: initialTests }: Props) {
     await supabase.from('projects').update({ updated_at: now }).eq('id', project.id)
     setUpdatedAt(now)
     await refreshTests(); setSaving(false); setModal(null)
-    showToast(modal === 'add' ? 'Test case přidán' : 'Změny uloženy')
+    showToast('Změny uloženy')
   }
 
   async function deleteTest(t: TestCase) {
