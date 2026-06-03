@@ -86,7 +86,11 @@ export default function ProjectDetail({ project, tests: initialTests }: Props) {
     filtered = filtered.filter(t =>
       t.test_id.toLowerCase().includes(s) ||
       t.name.toLowerCase().includes(s) ||
-      t.description.toLowerCase().includes(s)
+      t.area.toLowerCase().includes(s) ||
+      t.description.toLowerCase().includes(s) ||
+      t.steps.toLowerCase().includes(s) ||
+      t.expected_result.toLowerCase().includes(s) ||
+      t.notes.toLowerCase().includes(s)
     )
   }
 
@@ -332,7 +336,7 @@ export default function ProjectDetail({ project, tests: initialTests }: Props) {
 
       {/* Filter bar */}
       <div className="bg-white rounded-2xl border border-slate-200 p-3 mb-4 flex flex-wrap gap-2">
-        <input type="text" placeholder="Hledat ID, název, popis…" value={search} onChange={e => setSearch(e.target.value)}
+        <input type="text" placeholder="Hledat v ID, názvu, krocích, výsledku…" value={search} onChange={e => setSearch(e.target.value)}
           className="flex-1 min-w-[160px] px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400" />
         <select value={filterStatus} onChange={e => setFS(e.target.value)} className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none">
           <option value="">Všechny statusy</option>
