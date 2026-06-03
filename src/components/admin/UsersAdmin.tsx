@@ -31,16 +31,27 @@ export default function UsersAdmin({ users, organizations }: { users: UserRow[],
     setLoading(true)
     setError('')
 
-    const res = await fetch('/api/admin/create-user', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, fullName, orgId, role })
-    })
-    const json = await res.json()
-    setLoading(false)
-    if (!res.ok) { setError(json.error || 'Chyba při vytváření uživatele.'); return }
-    setShowNew(false)
-    router.refresh()
+    try {
+      const res = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, fullName, orgId, role })
+      })
+
+      let json: { error?: string } = {}
+      try { json = await res.json() } catch { /* response not JSON – Vercel error page */ }
+
+      if (!res.ok) {
+        setError(json.error || `Chyba ${res.status} – zkontroluj Vercel logy.`)
+        return
+      }
+      setShowNew(false)
+      router.refresh()
+    } catch (e: unknown) {
+      setError('Síťová chyba: ' + (e instanceof Error ? e.message : 'zkuste znovu'))
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
