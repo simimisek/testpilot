@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 
 interface UserRow {
   id: string
+  email: string
   full_name: string | null
   role: string
   organization_id: string | null
@@ -73,6 +74,7 @@ export default function UsersAdmin({ users, organizations }: { users: UserRow[],
           <div key={u.id} className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-4">
             <div className="flex-1">
               <p className="font-semibold text-slate-800">{u.full_name || '(bez jména)'}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{u.email}</p>
               <p className="text-xs text-slate-400 mt-0.5">
                 {(u.organization as any)?.name || '—'} · {u.role === 'app_admin' ? 'Admin' : 'Člen'}
               </p>
