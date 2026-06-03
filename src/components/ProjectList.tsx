@@ -197,7 +197,7 @@ export default function ProjectList({ projects, isAdmin, initialOrgFilter = '' }
                   type="text" value={name} onChange={e => setName(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && createProject()}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400"
-                  placeholder="např. Enectiva Mobile – v2.5" autoFocus
+                  placeholder="např. Mobilní aplikace – v2.5" autoFocus
                 />
               </div>
               {isAdmin && (
